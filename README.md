@@ -34,6 +34,8 @@ cd nemoclaw-vanilla
 
 The dashboard helper prints the local OpenClaw dashboard URL. If your browser is on another machine, it also prints the SSH tunnel command to run from that machine.
 
+The dashboard helper also prepares OpenClaw's Node runtime for the local NemoClaw inference route before it starts the dashboard forward.
+
 ## What The Installer Does
 
 `./install.sh` runs `scripts/onboard-nemoclaw.sh`, which:
@@ -46,6 +48,12 @@ The dashboard helper prints the local OpenClaw dashboard URL. If your browser is
 - ignores an active Python virtualenv during install
 - bypasses the optional model-router pip install unless `NEMOCLAW_PROVIDER=routed`
 - redirects accidental Ollama pulls to the requested model
+
+`./scripts/show-openclaw-dashboard.sh` also:
+
+- verifies Node can reach `https://inference.local/v1/models` through the OpenShell proxy
+- installs the `inference.local` CA chain for Node
+- restarts the in-sandbox OpenClaw gateway with the proxy-aware Node environment
 
 ## Options
 

@@ -60,6 +60,10 @@ need docker
 need python3
 need curl
 
+prepare_inference_route() {
+  "$SCRIPT_DIR/prepare-openclaw-node-inference.sh" "$SANDBOX"
+}
+
 wait_for_dashboard() {
   local url="http://127.0.0.1:${LOCAL_PORT}/"
   local i
@@ -112,8 +116,16 @@ sandbox_dashboard_responds() {
 
 start_sandbox_dashboard() {
   echo "Starting OpenClaw gateway inside sandbox '$SANDBOX'"
-  sandbox_user_exec \
-    "nohup /usr/local/bin/openclaw gateway run --bind loopback --port ${REMOTE_PORT} >/tmp/openclaw-gateway-dashboard.log 2>&1 &"
+  sandbox_user_exec "
+    proxy_host=\"\${NEMOCLAW_PROXY_HOST:-10.200.0.1}\"
+    proxy_port=\"\${NEMOCLAW_PROXY_PORT:-3128}\"
+    export HTTP_PROXY=\"http://\${proxy_host}:\${proxy_port}\"
+    export HTTPS_PROXY=\"\$HTTP_PROXY\"
+    export NO_PROXY=\"\${NO_PROXY:-localhost,127.0.0.1,::1,\${proxy_host}}\"
+    [ -f /etc/openshell-tls/openshell-ca.pem ] && export NODE_EXTRA_CA_CERTS=/etc/openshell-tls/openshell-ca.pem
+    [ -f /etc/openshell-tls/ca-bundle.pem ] && export SSL_CERT_FILE=/etc/openshell-tls/ca-bundle.pem
+    nohup /usr/local/bin/openclaw gateway run --bind loopback --port ${REMOTE_PORT} >/tmp/openclaw-gateway-dashboard.log 2>&1 &
+  "
 }
 
 ensure_sandbox_dashboard() {
@@ -173,6 +185,7 @@ if ! docker exec openshell-cluster-nemoclaw kubectl get pod -n openshell "$SANDB
   exit 1
 fi
 
+prepare_inference_route
 ensure_sandbox_dashboard
 
 GATEWAY_IP="$(gateway_container_ip)"
