@@ -95,6 +95,48 @@ wait_for_gateway_forward() {
   return 1
 }
 
+sandbox_exec() {
+  docker exec openshell-cluster-nemoclaw \
+    kubectl exec -n openshell "$SANDBOX" -c agent -- "$@"
+}
+
+sandbox_user_exec() {
+  docker exec openshell-cluster-nemoclaw \
+    kubectl exec -n openshell "$SANDBOX" -c agent -- \
+    su -s /bin/bash -c "$1" sandbox
+}
+
+sandbox_dashboard_responds() {
+  sandbox_exec curl -fsS --max-time 5 "http://127.0.0.1:${REMOTE_PORT}/" >/dev/null 2>&1
+}
+
+start_sandbox_dashboard() {
+  echo "Starting OpenClaw gateway inside sandbox '$SANDBOX'"
+  sandbox_user_exec \
+    "nohup /usr/local/bin/openclaw gateway run --bind loopback --port ${REMOTE_PORT} >/tmp/openclaw-gateway-dashboard.log 2>&1 &"
+}
+
+ensure_sandbox_dashboard() {
+  local i
+
+  if sandbox_dashboard_responds; then
+    return 0
+  fi
+
+  start_sandbox_dashboard
+  for i in $(seq 1 30); do
+    if sandbox_dashboard_responds; then
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo "OpenClaw dashboard is not responding inside sandbox '$SANDBOX'." >&2
+  echo "Inspect the sandbox log with:" >&2
+  echo "  docker exec openshell-cluster-nemoclaw kubectl exec -n openshell $SANDBOX -c agent -- su -s /bin/bash -c 'tail -80 /tmp/openclaw-gateway-dashboard.log' sandbox" >&2
+  exit 1
+}
+
 start_gateway_port_forward() {
   docker exec openshell-cluster-nemoclaw \
     pkill -f "kubectl port-forward.*${SANDBOX}.*${GATEWAY_PORT}:${REMOTE_PORT}" \
@@ -131,11 +173,7 @@ if ! docker exec openshell-cluster-nemoclaw kubectl get pod -n openshell "$SANDB
   exit 1
 fi
 
-if ! docker exec openshell-cluster-nemoclaw kubectl exec -n openshell "$SANDBOX" -c agent -- \
-  curl -fsS --max-time 10 "http://127.0.0.1:${REMOTE_PORT}/" >/dev/null; then
-  echo "OpenClaw dashboard is not responding inside sandbox '$SANDBOX'." >&2
-  exit 1
-fi
+ensure_sandbox_dashboard
 
 GATEWAY_IP="$(gateway_container_ip)"
 start_host_proxy "$GATEWAY_IP"
@@ -166,4 +204,3 @@ To print the token now:
   ./scripts/show-openclaw-dashboard.sh --sandbox $SANDBOX --show-token
 EOF
 fi
-
