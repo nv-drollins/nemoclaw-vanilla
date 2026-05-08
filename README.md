@@ -55,7 +55,46 @@ The dashboard helper also prepares OpenClaw's Node runtime for the local NemoCla
 - installs the `inference.local` CA chain for Node
 - restarts the in-sandbox OpenClaw gateway with the proxy-aware Node environment
 
-## Options
+## NemoClaw Onboarding Variables
+
+`./install.sh` passes through the following variables to
+`scripts/onboard-nemoclaw.sh` and the official NemoClaw installer.
+
+| Variable | Default | Available options / examples | Purpose |
+|---|---:|---|---|
+| `NEMOCLAW_MODEL` | `qwen3.6:35b` when provider is `ollama` | Any model from `ollama list` for Ollama; provider model ID for other providers | Selects the model NemoClaw/OpenClaw should use. |
+| `NEMOCLAW_PROVIDER` | `ollama` | `ollama`, `routed`; experimental `vllm` or `install-vllm` with `NEMOCLAW_EXPERIMENTAL=1`; other providers supported by the current NemoClaw installer | Selects the inference provider. |
+| `NEMOCLAW_EXPERIMENTAL` | unset | `1` | Enables experimental provider choices such as local vLLM or managed local vLLM. |
+| `NEMOCLAW_SANDBOX_NAME` | `vanilla-agent` | Any valid sandbox name, for example `my-agent` | Names the NemoClaw sandbox. Use a unique name to avoid replacing another sandbox. |
+| `NEMOCLAW_POLICY_TIER` | `balanced` | `restricted`, `balanced`, `open` | Selects NemoClaw's baseline policy tier during onboarding. |
+| `NEMOCLAW_INSTALL_FRESH` | `1` | `1` or `0` | Wrapper control. `1` passes `--fresh`; `0` omits it. |
+| `NEMOCLAW_ROUTER_BYPASS` | `1` | `1` or `0` | Wrapper control. Skips the optional router pip install when provider is not `routed`. |
+| `NEMOCLAW_STRICT_MODEL_PULL` | `1` | `1` or `0` | Wrapper control. Redirects unexpected Ollama pulls to `NEMOCLAW_MODEL`. |
+| `NEMOCLAW_LOCAL_INFERENCE_TIMEOUT` | `300` | Seconds, for example `600` | Wait time for local inference validation and model warm-up. |
+| `NEMOCLAW_SANDBOX_READY_TIMEOUT` | `600` | Seconds, for example `900` | Wait time for first-run sandbox image upload and startup. |
+| `NEMOCLAW_OLLAMA_BIN` | auto-detected | Full path to `ollama` | Overrides which real Ollama binary the wrapper calls. |
+| `NEMOCLAW_PIP_BIN` | auto-detected | Full path to `pip` or `pip3` | Overrides which real pip binary the router-bypass shim delegates to. |
+
+| Script-set variable | Value | Notes |
+|---|---:|---|
+| `NEMOCLAW_ACCEPT_THIRD_PARTY_SOFTWARE` | `1` | Accepts the official installer's third-party software prompt for non-interactive setup. |
+| `NEMOCLAW_NON_INTERACTIVE` | `1` | Keeps the installer in scripted mode. |
+| `NEMOCLAW_YES` | `1` | Answers yes to supported installer confirmation prompts. |
+| `NEMOCLAW_REAL_PIP_BIN` | auto-detected | Internal handoff from the pip wrapper to the real pip binary. |
+
+## Onboarding Script Options
+
+| Option | Source | Available options | Notes |
+|---|---|---|---|
+| `--sandbox NAME` | Repo wrapper | Any valid sandbox name | Same effect as `NEMOCLAW_SANDBOX_NAME=NAME`. |
+| `--model MODEL` | Repo wrapper | Any provider-appropriate model ID | Same effect as `NEMOCLAW_MODEL=MODEL`. |
+| `--provider PROVIDER` | Repo wrapper | `ollama`, `routed`, `vllm`, `install-vllm`, or another provider accepted by NemoClaw | Same effect as `NEMOCLAW_PROVIDER=PROVIDER`. |
+| `--no-fresh` | Repo wrapper | Present or omitted | Omits the official installer `--fresh` flag. Useful when preserving an existing NemoClaw/OpenShell setup. |
+| `--fresh` | Official NemoClaw installer | Passed by default through `NEMOCLAW_INSTALL_FRESH=1` | This repo does not require typing `--fresh`; the wrapper adds it unless disabled. |
+| `--non-interactive` | Official NemoClaw installer | Always passed | Runs onboarding without prompts. |
+| `--yes-i-accept-third-party-software` | Official NemoClaw installer | Always passed | Required by the official installer for non-interactive setup. |
+
+## Examples
 
 Use a different sandbox name:
 
