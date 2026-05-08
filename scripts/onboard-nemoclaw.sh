@@ -3,7 +3,7 @@ set -euo pipefail
 
 PROVIDER="${NEMOCLAW_PROVIDER:-ollama}"
 SANDBOX="${NEMOCLAW_SANDBOX_NAME:-vanilla-agent}"
-DEFAULT_OLLAMA_MODEL="qwen3.6:35b-a3b-coding-nvfp4"
+DEFAULT_OLLAMA_MODEL="qwen3.6:35b"
 MODEL="${NEMOCLAW_MODEL:-}"
 MODEL_EXPLICIT=0
 if [ -n "$MODEL" ]; then
@@ -42,7 +42,7 @@ Defaults:
 Environment:
   NEMOCLAW_SANDBOX_NAME     Sandbox name. Default: vanilla-agent
   NEMOCLAW_PROVIDER         Provider. Default: ollama
-  NEMOCLAW_MODEL            Model. Default for Ollama: qwen3.6:35b-a3b-coding-nvfp4
+  NEMOCLAW_MODEL            Model. Default for Ollama: qwen3.6:35b
   NEMOCLAW_ROUTER_BYPASS    Skip optional router pip install for non-routed providers. Default: 1
   NEMOCLAW_STRICT_MODEL_PULL Redirect unexpected ollama pulls to NEMOCLAW_MODEL. Default: 1
 EOF

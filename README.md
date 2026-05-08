@@ -7,7 +7,7 @@ It also includes the small router bypass we needed on DGX Spark: when the select
 Default model:
 
 ```bash
-qwen3.6:35b-a3b-coding-nvfp4
+qwen3.6:35b
 ```
 
 ## Before You Begin
@@ -41,7 +41,7 @@ The dashboard helper prints the local OpenClaw dashboard URL. If your browser is
 - uses the official NemoClaw installer from `https://www.nvidia.com/nemoclaw.sh`
 - creates a vanilla sandbox named `vanilla-agent`
 - uses `NEMOCLAW_PROVIDER=ollama` by default
-- uses `NEMOCLAW_MODEL=qwen3.6:35b-a3b-coding-nvfp4` by default
+- uses `NEMOCLAW_MODEL=qwen3.6:35b` by default
 - generates NVIDIA CDI specs if they are missing
 - ignores an active Python virtualenv during install
 - bypasses the optional model-router pip install unless `NEMOCLAW_PROVIDER=routed`
@@ -58,7 +58,7 @@ NEMOCLAW_SANDBOX_NAME=my-agent ./install.sh
 Use a different Ollama model:
 
 ```bash
-NEMOCLAW_MODEL=qwen3.6:35b-a3b-coding-nvfp4 ./install.sh
+NEMOCLAW_MODEL=qwen3.6:35b ./install.sh
 ```
 
 Run without forcing a fresh NemoClaw installer pass:
@@ -122,4 +122,3 @@ Destroy the sandbox:
 ```bash
 ./scripts/stop-nemoclaw.sh --destroy
 ```
-
