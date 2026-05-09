@@ -21,7 +21,47 @@ Run this on the Linux host where NemoClaw should run. The host should already ha
 - `sudo` access
 - enough GPU memory for the selected Ollama model
 
-Ollama may already be installed, or NemoClaw can install/start it during onboarding.
+### Install and expose Ollama
+
+If you use the default `NEMOCLAW_PROVIDER=ollama` path, the NemoClaw sandbox
+must be able to reach the host Ollama server. Install Ollama on the host, then
+configure the systemd service to listen on all interfaces:
+
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+
+sudo mkdir -p /etc/systemd/system/ollama.service.d
+printf '[Service]\nEnvironment="OLLAMA_HOST=0.0.0.0"\n' | sudo tee /etc/systemd/system/ollama.service.d/override.conf
+sudo systemctl daemon-reload
+sudo systemctl restart ollama
+```
+
+Verify Ollama is running:
+
+```bash
+curl http://0.0.0.0:11434
+```
+
+Expected response:
+
+```text
+Ollama is running
+```
+
+If it is not running, start it with:
+
+```bash
+sudo systemctl start ollama
+```
+
+Always start Ollama through systemd with `sudo systemctl restart ollama` or
+`sudo systemctl start ollama`. Do not use `ollama serve &` for this repo's
+Ollama path. A manually started Ollama process will not use the
+`OLLAMA_HOST=0.0.0.0` systemd override, and the NemoClaw sandbox will not be
+able to reach the inference server.
+
+`OLLAMA_HOST=0.0.0.0` exposes Ollama on the host network. Use this on a trusted
+local network, or apply host firewall rules appropriate for your environment.
 
 ## Quick Start
 
