@@ -25,10 +25,35 @@ Run this on the Linux host where NemoClaw should run. The host should already ha
 
 If you use the default `NEMOCLAW_PROVIDER=ollama` path, the NemoClaw sandbox
 must be able to reach the host Ollama server. Install Ollama on the host, then
-configure the systemd service to listen on all interfaces:
+configure the systemd service to listen on all interfaces. **Important for DGX
+Spark / GB10: pin Ollama to `0.22.1`; newer `0.23.x` builds have been observed
+to fall back to CPU-only execution on GB10.**
 
 ```bash
-curl -fsSL https://ollama.com/install.sh | sh
+OLLAMA_VERSION=0.22.1
+OLLAMA_ARCH="$(case "$(uname -m)" in aarch64|arm64) echo arm64 ;; x86_64|amd64) echo amd64 ;; *) uname -m ;; esac)"
+curl -fL --show-error -o "/tmp/ollama-linux-${OLLAMA_ARCH}.tar.zst" \
+  "https://github.com/ollama/ollama/releases/download/v${OLLAMA_VERSION}/ollama-linux-${OLLAMA_ARCH}.tar.zst"
+sudo useradd -r -s /bin/false -U -m -d /usr/share/ollama ollama 2>/dev/null || true
+sudo usermod -a -G video,render ollama 2>/dev/null || true
+sudo tar --zstd -xf "/tmp/ollama-linux-${OLLAMA_ARCH}.tar.zst" -C /usr/local
+sudo chmod -R a+rX /usr/local/lib/ollama
+sudo tee /etc/systemd/system/ollama.service >/dev/null <<'EOF'
+[Unit]
+Description=Ollama Service
+After=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/ollama serve
+User=ollama
+Group=ollama
+Restart=always
+RestartSec=3
+Environment="PATH=/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+[Install]
+WantedBy=default.target
+EOF
 
 sudo mkdir -p /etc/systemd/system/ollama.service.d
 printf '[Service]\nEnvironment="OLLAMA_HOST=0.0.0.0"\n' | sudo tee /etc/systemd/system/ollama.service.d/override.conf
