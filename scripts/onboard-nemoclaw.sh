@@ -12,6 +12,7 @@ if [ -n "$MODEL" ]; then
   MODEL_EXPLICIT=1
 fi
 INSTALL_FRESH="${NEMOCLAW_INSTALL_FRESH:-1}"
+INSTALL_REF="${NEMOCLAW_INSTALL_REF:-latest}"
 ROUTER_BYPASS="${NEMOCLAW_ROUTER_BYPASS:-1}"
 STRICT_MODEL_PULL="${NEMOCLAW_STRICT_MODEL_PULL:-1}"
 WRAPPER_DIR="$(mktemp -d)"
@@ -298,6 +299,7 @@ if [ "$INSTALL_FRESH" = "1" ]; then
   install_args+=(--fresh)
 fi
 
+echo "NemoClaw installer ref: ${INSTALL_REF}"
 echo "Onboarding sandbox '$SANDBOX'"
 echo "Provider: $PROVIDER"
 echo "Model:    ${MODEL:-provider default}"

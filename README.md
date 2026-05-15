@@ -178,6 +178,7 @@ The dashboard helper also prepares OpenClaw's Node runtime for the local NemoCla
 | `NEMOCLAW_EXPERIMENTAL` | unset | `1` | Enables experimental provider choices such as local vLLM or managed local vLLM. |
 | `NEMOCLAW_SANDBOX_NAME` | `vanilla-agent` | Any valid sandbox name, for example `my-agent` | Names the NemoClaw sandbox. Use a unique name to avoid replacing another sandbox. |
 | `NEMOCLAW_POLICY_TIER` | `balanced` | `restricted`, `balanced`, `open` | Selects NemoClaw's baseline policy tier during onboarding. |
+| `NEMOCLAW_INSTALL_REF` | unset (latest) | `v0.0.38`, `v0.0.43`, or another published installer ref | Pins the official NemoClaw installer for repeatable demo testing. Leave unset for latest. |
 | `NEMOCLAW_INSTALL_FRESH` | `1` | `1` or `0` | Wrapper control. `1` passes `--fresh`; `0` omits it. |
 | `NEMOCLAW_ROUTER_BYPASS` | `1` | `1` or `0` | Wrapper control. Skips the optional router pip install when provider is not `routed`. |
 | `NEMOCLAW_STRICT_MODEL_PULL` | `1` | `1` or `0` | Wrapper control. Redirects unexpected Ollama pulls to `NEMOCLAW_MODEL`. |
@@ -242,6 +243,23 @@ NEMOCLAW_PROVIDER=install-vllm \
 ```
 
 Do not use this router bypass with `NEMOCLAW_PROVIDER=routed`; in that mode, the router is the provider.
+
+## Version Pinning And Diagnostics
+
+Leave `NEMOCLAW_INSTALL_REF` unset for the current NemoClaw installer. To compare against a previous known demo lane, prefix the installer:
+
+```bash
+NEMOCLAW_INSTALL_REF=v0.0.38 ./install.sh
+```
+
+Check the installed stack before debugging a sandbox issue:
+
+```bash
+nemoclaw --version
+openshell --version
+nemoclaw vanilla-agent status
+docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+```
 
 ## Status
 
