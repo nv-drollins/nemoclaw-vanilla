@@ -21,6 +21,22 @@ Run this on the Linux host where NemoClaw should run. The host should already ha
 - `sudo` access
 - enough GPU memory for the selected Ollama model
 
+### Configure Docker GPU runtime
+
+DGX Spark systems may include the NVIDIA Container Toolkit out of the box, but
+Docker still needs the NVIDIA runtime configured:
+
+```bash
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+```
+
+Optional verification:
+
+```bash
+sudo docker run --rm --runtime=nvidia --gpus all ubuntu nvidia-smi
+```
+
 ### Install and expose Ollama
 
 If you use the default `NEMOCLAW_PROVIDER=ollama` path, the NemoClaw sandbox
