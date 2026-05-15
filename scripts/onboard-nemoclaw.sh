@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 PROVIDER="${NEMOCLAW_PROVIDER:-ollama}"
 SANDBOX="${NEMOCLAW_SANDBOX_NAME:-vanilla-agent}"
 DEFAULT_OLLAMA_MODEL="qwen3.6:35b"
@@ -288,6 +290,7 @@ cp "$WRAPPER_DIR/pip3" "$WRAPPER_DIR/pip"
 
 export PATH="$WRAPPER_DIR:$PATH"
 
+bash "$SCRIPT_DIR/ensure-sudo.sh"
 ensure_nvidia_cdi_specs
 
 install_args=(--non-interactive --yes-i-accept-third-party-software)

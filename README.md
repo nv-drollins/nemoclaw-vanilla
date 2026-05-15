@@ -10,6 +10,14 @@ Default model:
 qwen3.6:35b
 ```
 
+## Sudo Prompts
+
+First-time setup may need sudo for host packages, Docker/NVIDIA toolkit configuration, or setup preflight checks. Passwordless sudo is not required, but install commands must run from an interactive terminal so sudo can prompt. When installing over SSH, use:
+
+```bash
+ssh -t nvidia@<spark-ip>
+```
+
 ## Before You Begin
 
 Run this on the Linux host where NemoClaw should run. The host should already have:
