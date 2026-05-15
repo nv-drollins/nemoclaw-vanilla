@@ -21,6 +21,28 @@ Run this on the Linux host where NemoClaw should run. The host should already ha
 - `sudo` access
 - enough GPU memory for the selected Ollama model
 
+### Enable Docker access without sudo
+
+DGX Spark systems may not add the current user to the `docker` group by
+default. If you skip this step, run Docker commands with `sudo`.
+
+Open a new terminal and test Docker access:
+
+```bash
+docker ps
+```
+
+If you see a permission denied error while connecting to the Docker daemon
+socket, add your user to the `docker` group:
+
+```bash
+sudo usermod -aG docker "$USER"
+newgrp docker
+```
+
+`newgrp docker` updates group membership for the current shell. You can also
+log out and back in, then rerun `docker ps`.
+
 ### Configure Docker GPU runtime
 
 DGX Spark systems may include the NVIDIA Container Toolkit out of the box, but
