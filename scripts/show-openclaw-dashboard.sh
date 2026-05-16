@@ -56,6 +56,7 @@ need() {
 }
 
 need nemoclaw
+need openshell
 need docker
 need python3
 need curl
@@ -79,8 +80,16 @@ wait_for_dashboard() {
   return 1
 }
 
+gateway_container_exists() {
+  docker inspect openshell-cluster-nemoclaw >/dev/null 2>&1
+}
+
 gateway_container_ip() {
   docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' openshell-cluster-nemoclaw
+}
+
+direct_sandbox_container() {
+  docker ps --filter "name=openshell-${SANDBOX}-" --format '{{.Names}}' | head -n 1
 }
 
 wait_for_gateway_forward() {
@@ -100,14 +109,40 @@ wait_for_gateway_forward() {
 }
 
 sandbox_exec() {
-  docker exec openshell-cluster-nemoclaw \
-    kubectl exec -n openshell "$SANDBOX" -c agent -- "$@"
+  local container
+
+  if gateway_container_exists; then
+    docker exec openshell-cluster-nemoclaw \
+      kubectl exec -n openshell "$SANDBOX" -c agent -- "$@"
+    return
+  fi
+
+  container="$(direct_sandbox_container)"
+  if [ -z "$container" ]; then
+    echo "OpenShell sandbox container for '$SANDBOX' was not found." >&2
+    return 1
+  fi
+
+  docker exec "$container" "$@"
 }
 
 sandbox_user_exec() {
-  docker exec openshell-cluster-nemoclaw \
-    kubectl exec -n openshell "$SANDBOX" -c agent -- \
-    su -s /bin/bash -c "$1" sandbox
+  local container
+
+  if gateway_container_exists; then
+    docker exec openshell-cluster-nemoclaw \
+      kubectl exec -n openshell "$SANDBOX" -c agent -- \
+      su -s /bin/bash -c "$1" sandbox
+    return
+  fi
+
+  container="$(direct_sandbox_container)"
+  if [ -z "$container" ]; then
+    echo "OpenShell sandbox container for '$SANDBOX' was not found." >&2
+    return 1
+  fi
+
+  docker exec "$container" su -s /bin/bash -c "$1" sandbox
 }
 
 sandbox_dashboard_responds() {
@@ -145,7 +180,11 @@ ensure_sandbox_dashboard() {
 
   echo "OpenClaw dashboard is not responding inside sandbox '$SANDBOX'." >&2
   echo "Inspect the sandbox log with:" >&2
-  echo "  docker exec openshell-cluster-nemoclaw kubectl exec -n openshell $SANDBOX -c agent -- su -s /bin/bash -c 'tail -80 /tmp/openclaw-gateway-dashboard.log' sandbox" >&2
+  if gateway_container_exists; then
+    echo "  docker exec openshell-cluster-nemoclaw kubectl exec -n openshell $SANDBOX -c agent -- su -s /bin/bash -c 'tail -80 /tmp/openclaw-gateway-dashboard.log' sandbox" >&2
+  else
+    echo "  docker exec \$(docker ps --filter name=openshell-$SANDBOX- --format '{{.Names}}' | head -n 1) su -s /bin/bash -c 'tail -80 /tmp/openclaw-gateway-dashboard.log' sandbox" >&2
+  fi
   exit 1
 }
 
@@ -160,36 +199,51 @@ start_gateway_port_forward() {
 }
 
 start_host_proxy() {
-  local target_ip="$1"
+  local target_ip="${1:-}"
 
-  "$SCRIPT_DIR/stop-dashboard-forward.sh" "$SANDBOX" >/dev/null 2>&1 || true
-  start_gateway_port_forward
-  wait_for_gateway_forward "$target_ip"
+  if gateway_container_exists; then
+    "$SCRIPT_DIR/stop-dashboard-forward.sh" "$SANDBOX" >/dev/null 2>&1 || true
+    start_gateway_port_forward
+    wait_for_gateway_forward "$target_ip"
 
-  nohup python3 "$SCRIPT_DIR/dashboard_tcp_proxy.py" \
-    --listen-host "$BIND_ADDR" \
-    --listen-port "$LOCAL_PORT" \
-    --target-host "$target_ip" \
-    --target-port "$GATEWAY_PORT" \
-    >/tmp/"${SANDBOX}-dashboard-proxy.log" 2>&1 &
+    nohup python3 "$SCRIPT_DIR/dashboard_tcp_proxy.py" \
+      --listen-host "$BIND_ADDR" \
+      --listen-port "$LOCAL_PORT" \
+      --target-host "$target_ip" \
+      --target-port "$GATEWAY_PORT" \
+      >/tmp/"${SANDBOX}-dashboard-proxy.log" 2>&1 &
+  else
+    pkill -f "openshell forward service.*${SANDBOX}.*${LOCAL_PORT}" >/dev/null 2>&1 || true
+    if curl -fsS --max-time 3 "http://127.0.0.1:${LOCAL_PORT}/" >/dev/null 2>&1; then
+      return 0
+    fi
+    if ! nemoclaw "$SANDBOX" recover >/tmp/"${SANDBOX}-dashboard-recover.log" 2>&1; then
+      cat /tmp/"${SANDBOX}-dashboard-recover.log" >&2
+      return 1
+    fi
+  fi
 }
 
 echo "OpenClaw dashboard:"
-if ! docker inspect openshell-cluster-nemoclaw >/dev/null 2>&1; then
-  echo "OpenShell gateway container openshell-cluster-nemoclaw was not found." >&2
-  exit 1
-fi
-
-if ! docker exec openshell-cluster-nemoclaw kubectl get pod -n openshell "$SANDBOX" >/dev/null 2>&1; then
-  echo "Sandbox pod '$SANDBOX' was not found." >&2
+if gateway_container_exists; then
+  if ! docker exec openshell-cluster-nemoclaw kubectl get pod -n openshell "$SANDBOX" >/dev/null 2>&1; then
+    echo "Sandbox pod '$SANDBOX' was not found." >&2
+    exit 1
+  fi
+elif [ -z "$(direct_sandbox_container)" ]; then
+  echo "OpenShell sandbox container for '$SANDBOX' was not found." >&2
   exit 1
 fi
 
 prepare_inference_route
 ensure_sandbox_dashboard
 
-GATEWAY_IP="$(gateway_container_ip)"
-start_host_proxy "$GATEWAY_IP"
+if gateway_container_exists; then
+  GATEWAY_IP="$(gateway_container_ip)"
+  start_host_proxy "$GATEWAY_IP"
+else
+  start_host_proxy
+fi
 wait_for_dashboard
 
 cat <<EOF

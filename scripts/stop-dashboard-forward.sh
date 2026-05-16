@@ -40,6 +40,17 @@ stop_host_processes() {
     # shellcheck disable=SC2086
     kill $pids 2>/dev/null || true
   fi
+
+  pids="$(
+    ps -eo pid=,args= |
+      awk -v sandbox="$SANDBOX" -v port="$LOCAL_PORT" '
+        $0 ~ /openshell forward service/ && $0 ~ sandbox && $0 ~ port { print $1 }
+      '
+  )"
+  if [ -n "$pids" ]; then
+    # shellcheck disable=SC2086
+    kill $pids 2>/dev/null || true
+  fi
 }
 
 stop_gateway_port_forward() {
@@ -58,5 +69,8 @@ stop_gateway_port_forward() {
 stop_host_processes
 stop_gateway_port_forward
 
-echo "Dashboard forward stopped for sandbox $SANDBOX."
+if command -v openshell >/dev/null 2>&1; then
+  openshell forward stop "$LOCAL_PORT" >/dev/null 2>&1 || true
+fi
 
+echo "Dashboard forward stopped for sandbox $SANDBOX."

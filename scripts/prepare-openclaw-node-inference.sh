@@ -11,12 +11,22 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! docker inspect openshell-cluster-nemoclaw >/dev/null 2>&1; then
-  echo "OpenShell gateway container openshell-cluster-nemoclaw was not found." >&2
+direct_sandbox_container() {
+  docker ps --filter "name=openshell-${SANDBOX}-" --format '{{.Names}}' | head -n 1
+}
+
+if docker inspect openshell-cluster-nemoclaw >/dev/null 2>&1; then
+  docker exec -i openshell-cluster-nemoclaw \
+    kubectl exec -i -n openshell "$SANDBOX" -c agent -- \
+    runuser -u sandbox -- bash -s < "$SCRIPT_DIR/sandbox-node-inference-setup.sh"
+  exit 0
+fi
+
+CONTAINER="$(direct_sandbox_container)"
+if [ -z "$CONTAINER" ]; then
+  echo "OpenShell sandbox container for '$SANDBOX' was not found." >&2
   exit 1
 fi
 
-docker exec -i openshell-cluster-nemoclaw \
-  kubectl exec -i -n openshell "$SANDBOX" -c agent -- \
+docker exec -i "$CONTAINER" \
   runuser -u sandbox -- bash -s < "$SCRIPT_DIR/sandbox-node-inference-setup.sh"
-
